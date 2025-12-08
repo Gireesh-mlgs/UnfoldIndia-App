@@ -1,6 +1,7 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "@/screens/HomeScreen";
+import PlaceDetailScreen from "@/screens/PlaceDetailScreen";
 import { HeaderTitle } from "@/components/HeaderTitle";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { Feather } from "@expo/vector-icons";
@@ -9,6 +10,7 @@ import { useTheme } from "@/hooks/useTheme";
 
 export type HomeStackParamList = {
   Home: undefined;
+  PlaceDetail: { placeId: string };
 };
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
@@ -23,7 +25,7 @@ export default function HomeStackNavigator() {
         name="Home"
         component={HomeScreen}
         options={{
-          headerTitle: () => <HeaderTitle title="Glassify" />,
+          headerTitle: () => <HeaderTitle title="Unfold India" />,
           headerRight: () => (
             <Pressable onPress={toggleTheme} hitSlop={10}>
               <Feather
@@ -33,6 +35,13 @@ export default function HomeStackNavigator() {
               />
             </Pressable>
           ),
+        }}
+      />
+      <Stack.Screen
+        name="PlaceDetail"
+        component={PlaceDetailScreen}
+        options={{
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -8,10 +8,13 @@ import {
   Pressable,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
@@ -24,21 +27,31 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { SearchBar } from "@/components/SearchBar";
 import { GlassCard } from "@/components/GlassCard";
-import { GradientButton } from "@/components/GradientButton";
-import { Spacing, BorderRadius, Shadows, Gradients } from "@/constants/theme";
-import { useTrendingItems, useRecommendedItems, Item } from "@/hooks/useItems";
+import { Spacing, BorderRadius, Shadows, Gradients, Colors } from "@/constants/theme";
+import { useTrendingItems, useRecommendedItems, useItems, Item } from "@/hooks/useItems";
+import type { HomeStackParamList } from "@/navigation/HomeStackNavigator";
+
+type NavigationProp = NativeStackNavigationProp<HomeStackParamList, "Home">;
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = width * 0.7;
+const HERO_CARD_WIDTH = width * 0.75;
+const PLACE_CARD_WIDTH = width * 0.42;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function TrendingCard({ item, index }: { item: Item; index: number }) {
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function HeroCard({ item, index, onPress }: { item: Item; index: number; onPress: () => void }) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(30);
   const scale = useSharedValue(1);
@@ -60,7 +73,7 @@ function TrendingCard({ item, index }: { item: Item; index: number }) {
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.95);
+    scale.value = withSpring(0.98);
   };
 
   const handlePressOut = () => {
@@ -69,136 +82,247 @@ function TrendingCard({ item, index }: { item: Item; index: number }) {
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
   };
-
-  const gradientStart = item.gradientStart || "#8B5CF6";
-  const gradientEnd = item.gradientEnd || "#EC4899";
 
   return (
     <AnimatedPressable
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={[styles.trendingCard, Shadows.glass, animatedStyle]}
+      style={[styles.heroCard, Shadows.card, animatedStyle]}
     >
       <Image
         source={{ uri: item.imageUrl }}
-        style={styles.trendingImage}
+        style={styles.heroImage}
         contentFit="cover"
         transition={300}
       />
       <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.8)"]}
-        style={styles.trendingOverlay}
+        colors={Gradients.heroOverlay}
+        style={styles.heroOverlay}
       />
-      <View style={styles.trendingContent}>
-        <View
-          style={[
-            styles.trendingBadge,
-            { backgroundColor: gradientStart + "40" },
-          ]}
-        >
-          <ThemedText
-            type="small"
-            style={styles.trendingBadgeText}
-            lightColor="#FFFFFF"
-            darkColor="#FFFFFF"
-          >
-            {item.subtitle || "Featured"}
-          </ThemedText>
-        </View>
+      <View style={styles.heroContent}>
+        {item.isTrending ? (
+          <View style={styles.heroBadge}>
+            <Feather name="star" size={12} color="#FFFFFF" />
+            <ThemedText
+              type="caption"
+              style={styles.heroBadgeText}
+              lightColor="#FFFFFF"
+              darkColor="#FFFFFF"
+            >
+              Top Pick
+            </ThemedText>
+          </View>
+        ) : null}
         <ThemedText
           type="h3"
-          style={styles.trendingTitle}
+          style={styles.heroTitle}
+          lightColor="#FFFFFF"
+          darkColor="#FFFFFF"
+          numberOfLines={2}
+        >
+          {item.title}
+        </ThemedText>
+        {item.subtitle ? (
+          <View style={styles.heroLocationRow}>
+            <Feather name="map-pin" size={12} color="rgba(255,255,255,0.8)" />
+            <ThemedText
+              type="small"
+              style={styles.heroLocation}
+              lightColor="rgba(255,255,255,0.8)"
+              darkColor="rgba(255,255,255,0.8)"
+            >
+              {item.subtitle}
+            </ThemedText>
+          </View>
+        ) : null}
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+function PlaceCard({ item, index, onPress }: { item: Item; index: number; onPress: () => void }) {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(20);
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    opacity.value = withDelay(
+      index * 80,
+      withTiming(1, { duration: 400, easing: Easing.out(Easing.ease) })
+    );
+    translateY.value = withDelay(
+      index * 80,
+      withTiming(0, { duration: 400, easing: Easing.out(Easing.ease) })
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.96);
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1);
+  };
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
+  const rating = item.rating ? (item.rating / 10).toFixed(1) : "4.5";
+
+  return (
+    <AnimatedPressable
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[styles.placeCard, Shadows.card, animatedStyle]}
+    >
+      <Image
+        source={{ uri: item.imageUrl }}
+        style={styles.placeImage}
+        contentFit="cover"
+        transition={300}
+      />
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.7)"]}
+        style={styles.placeOverlay}
+      />
+      <View style={styles.placeContent}>
+        <ThemedText
+          type="h4"
+          style={styles.placeTitle}
+          lightColor="#FFFFFF"
+          darkColor="#FFFFFF"
+          numberOfLines={1}
+        >
+          {item.title}
+        </ThemedText>
+        <View style={styles.placeMetaRow}>
+          <View style={styles.ratingBadge}>
+            <Feather name="star" size={10} color="#F59E0B" />
+            <ThemedText type="caption" style={styles.ratingText}>
+              {rating}
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+      {item.isRecommended ? (
+        <View style={styles.gemBadge}>
+          <Feather name="star" size={10} color="#FFFFFF" />
+        </View>
+      ) : null}
+    </AnimatedPressable>
+  );
+}
+
+function NeighborhoodCard({ name, count, imageUrl, onPress }: { name: string; count: number; imageUrl: string; onPress: () => void }) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.96);
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1);
+  };
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[styles.neighborhoodCard, Shadows.card, animatedStyle]}
+    >
+      <Image
+        source={{ uri: imageUrl }}
+        style={styles.neighborhoodImage}
+        contentFit="cover"
+        transition={300}
+      />
+      <LinearGradient
+        colors={["transparent", "rgba(36, 49, 74, 0.85)"]}
+        style={styles.neighborhoodOverlay}
+      />
+      <View style={styles.neighborhoodContent}>
+        <ThemedText
+          type="h4"
+          style={styles.neighborhoodName}
           lightColor="#FFFFFF"
           darkColor="#FFFFFF"
         >
-          {item.title}
+          {name}
+        </ThemedText>
+        <ThemedText
+          type="caption"
+          style={styles.neighborhoodCount}
+          lightColor="rgba(255,255,255,0.7)"
+          darkColor="rgba(255,255,255,0.7)"
+        >
+          {count} places
         </ThemedText>
       </View>
     </AnimatedPressable>
   );
 }
 
-function RecommendedCard({
-  item,
-  index,
-}: {
-  item: Item;
-  index: number;
-}) {
-  const opacity = useSharedValue(0);
-  const translateX = useSharedValue(-30);
+function LocationChip() {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.locationChip, { backgroundColor: theme.backgroundSecondary }]}>
+      <Feather name="map-pin" size={14} color={Colors.light.primary} />
+      <ThemedText type="small" style={styles.locationText}>
+        Delhi NCR
+      </ThemedText>
+      <Feather name="chevron-down" size={14} color={theme.textSecondary} />
+    </View>
+  );
+}
 
-  useEffect(() => {
-    opacity.value = withDelay(
-      index * 150 + 300,
-      withTiming(1, { duration: 500, easing: Easing.out(Easing.ease) })
-    );
-    translateX.value = withDelay(
-      index * 150 + 300,
-      withTiming(0, { duration: 500, easing: Easing.out(Easing.ease) })
-    );
-  }, []);
+function FloatingNearbyButton({ onPress }: { onPress: () => void }) {
+  const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateX: translateX.value }],
+    transform: [{ scale: scale.value }],
   }));
 
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handlePressIn = () => {
+    scale.value = withSpring(0.9);
   };
 
-  const rating = item.rating ? (item.rating / 10).toFixed(1) : "4.5";
+  const handlePressOut = () => {
+    scale.value = withSpring(1);
+  };
 
   return (
-    <Animated.View style={animatedStyle}>
-      <GlassCard onPress={handlePress} style={styles.recommendedCard}>
-        <View style={styles.recommendedHeader}>
-          <View style={styles.recommendedTitleContainer}>
-            <ThemedText type="h4">{item.title}</ThemedText>
-            <View style={styles.categoryRow}>
-              <View
-                style={[
-                  styles.categoryDot,
-                  { backgroundColor: item.gradientStart || "#8B5CF6" },
-                ]}
-              />
-              <ThemedText
-                type="small"
-                lightColor="#6B7280"
-                darkColor="#9CA3AF"
-              >
-                {item.subtitle || "Collection"}
-              </ThemedText>
-            </View>
-          </View>
-          <View style={styles.ratingContainer}>
-            <Feather name="star" size={14} color="#F59E0B" />
-            <ThemedText type="small" style={styles.ratingText}>
-              {rating}
-            </ThemedText>
-          </View>
-        </View>
-        <ThemedText
-          type="body"
-          style={styles.recommendedDescription}
-          lightColor="#6B7280"
-          darkColor="#9CA3AF"
-          numberOfLines={2}
-        >
-          {item.description || "Discover this amazing collection."}
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[styles.floatingButton, Shadows.fab, animatedStyle]}
+    >
+      <LinearGradient
+        colors={Gradients.saffronGold}
+        style={styles.floatingButtonGradient}
+      >
+        <Feather name="navigation" size={20} color="#FFFFFF" />
+        <ThemedText type="small" style={styles.floatingButtonText} lightColor="#FFFFFF" darkColor="#FFFFFF">
+          Nearby
         </ThemedText>
-        <View style={styles.recommendedActions}>
-          <GradientButton
-            title="View Details"
-            size="small"
-            gradient={Gradients.purpleBlue}
-          />
-        </View>
-      </GlassCard>
-    </Animated.View>
+      </LinearGradient>
+    </AnimatedPressable>
   );
 }
 
@@ -211,23 +335,71 @@ function LoadingPlaceholder() {
   );
 }
 
+const neighborhoods = [
+  { name: "Hauz Khas", count: 24, imageUrl: "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=400" },
+  { name: "Connaught Place", count: 32, imageUrl: "https://images.unsplash.com/photo-1595658658481-d53d3f999875?w=400" },
+  { name: "Chandni Chowk", count: 28, imageUrl: "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400" },
+  { name: "Mehrauli", count: 18, imageUrl: "https://images.unsplash.com/photo-1548013146-72479768bada?w=400" },
+];
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme, isDark } = useTheme();
-  const queryClient = useQueryClient();
+  const navigation = useNavigation<NavigationProp>();
+
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const handlePlacePress = useCallback((placeId: string) => {
+    navigation.navigate("PlaceDetail", { placeId });
+  }, [navigation]);
 
   const { data: trendingItems, isLoading: trendingLoading, refetch: refetchTrending } = useTrendingItems();
   const { data: recommendedItems, isLoading: recommendedLoading, refetch: refetchRecommended } = useRecommendedItems();
+  const { data: allItems, isLoading: allLoading, refetch: refetchAll } = useItems({ limit: 20 });
 
-  const [refreshing, setRefreshing] = React.useState(false);
+  const hiddenGems = useMemo(() => {
+    return (allItems || []).filter(item => item.isRecommended).slice(0, 6);
+  }, [allItems]);
+
+  const weekendEscapes = useMemo(() => {
+    return (allItems || []).slice(0, 4);
+  }, [allItems]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchTrending(), refetchRecommended()]);
+    await Promise.all([refetchTrending(), refetchRecommended(), refetchAll()]);
     setRefreshing(false);
-  }, [refetchTrending, refetchRecommended]);
+  }, [refetchTrending, refetchRecommended, refetchAll]);
+
+  const handleNearbyPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      "Nearby Places",
+      "Map view with nearby places is coming soon! We're adding location-based discovery.",
+      [{ text: "OK" }]
+    );
+  };
+
+  const handleNeighborhoodPress = (name: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      name,
+      `Exploring ${name} is coming soon! You'll be able to discover all the hidden gems in this area.`,
+      [{ text: "OK" }]
+    );
+  };
+
+  const handleSeeAllPress = (section: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      section,
+      `Full ${section} list is coming soon! You'll be able to browse and filter all places.`,
+      [{ text: "OK" }]
+    );
+  };
 
   const headerOpacity = useSharedValue(0);
   const headerTranslateY = useSharedValue(-20);
@@ -242,7 +414,7 @@ export default function HomeScreen() {
     transform: [{ translateY: headerTranslateY.value }],
   }));
 
-  const isLoading = trendingLoading || recommendedLoading;
+  const greeting = getGreeting();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -254,7 +426,7 @@ export default function HomeScreen() {
         style={styles.scrollView}
         contentContainerStyle={{
           paddingTop: headerHeight + Spacing.md,
-          paddingBottom: tabBarHeight + Spacing.xl,
+          paddingBottom: tabBarHeight + Spacing.xl + 60,
         }}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
         showsVerticalScrollIndicator={false}
@@ -267,26 +439,37 @@ export default function HomeScreen() {
         }
       >
         <Animated.View style={[styles.headerSection, headerAnimatedStyle]}>
-          <ThemedText type="h1" style={styles.heroTitle}>
-            Discover
-          </ThemedText>
-          <ThemedText
-            type="body"
-            style={styles.heroSubtitle}
-            lightColor="#6B7280"
-            darkColor="#9CA3AF"
-          >
-            Explore trending collections and recommendations
-          </ThemedText>
+          <View style={styles.greetingRow}>
+            <View>
+              <ThemedText type="h1" style={styles.greetingText}>
+                {greeting}
+              </ThemedText>
+              <ThemedText
+                type="body"
+                style={styles.greetingSubtext}
+                lightColor={Colors.light.textSecondary}
+                darkColor={Colors.dark.textSecondary}
+              >
+                What would you like to explore today?
+              </ThemedText>
+            </View>
+            <LocationChip />
+          </View>
         </Animated.View>
+
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search Delhi, monuments, cafes, trails..."
+          />
+        </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText type="h3">Trending Now</ThemedText>
-            <Pressable
-              onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-            >
-              <ThemedText type="link" lightColor="#8B5CF6" darkColor="#A855F7">
+            <ThemedText type="h3" style={styles.sectionTitle}>Top Picks Today</ThemedText>
+            <Pressable onPress={() => handleSeeAllPress("Top Picks")}>
+              <ThemedText type="link" lightColor={Colors.light.primary} darkColor={Colors.dark.primary}>
                 See All
               </ThemedText>
             </Pressable>
@@ -299,11 +482,11 @@ export default function HomeScreen() {
               data={trendingItems || []}
               keyExtractor={(item) => item.id}
               renderItem={({ item, index }) => (
-                <TrendingCard item={item} index={index} />
+                <HeroCard item={item} index={index} onPress={() => handlePlacePress(item.id)} />
               )}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
-              snapToInterval={CARD_WIDTH + Spacing.md}
+              snapToInterval={HERO_CARD_WIDTH + Spacing.md}
               decelerationRate="fast"
             />
           )}
@@ -311,11 +494,9 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText type="h3">Recommended</ThemedText>
-            <Pressable
-              onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-            >
-              <ThemedText type="link" lightColor="#8B5CF6" darkColor="#A855F7">
+            <ThemedText type="h3" style={styles.sectionTitle}>Hidden Gems Near You</ThemedText>
+            <Pressable onPress={() => handleSeeAllPress("Hidden Gems")}>
+              <ThemedText type="link" lightColor={Colors.light.primary} darkColor={Colors.dark.primary}>
                 See All
               </ThemedText>
             </Pressable>
@@ -323,14 +504,71 @@ export default function HomeScreen() {
           {recommendedLoading ? (
             <LoadingPlaceholder />
           ) : (
-            <View style={styles.recommendedList}>
-              {(recommendedItems || []).map((item, index) => (
-                <RecommendedCard key={item.id} item={item} index={index} />
-              ))}
-            </View>
+            <FlatList
+              horizontal
+              data={hiddenGems}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item, index }) => (
+                <PlaceCard item={item} index={index} onPress={() => handlePlacePress(item.id)} />
+              )}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              snapToInterval={PLACE_CARD_WIDTH + Spacing.md}
+              decelerationRate="fast"
+            />
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="h3" style={styles.sectionTitle}>Local Picks by Neighborhood</ThemedText>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {neighborhoods.map((neighborhood) => (
+              <NeighborhoodCard
+                key={neighborhood.name}
+                name={neighborhood.name}
+                count={neighborhood.count}
+                imageUrl={neighborhood.imageUrl}
+                onPress={() => handleNeighborhoodPress(neighborhood.name)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="h3" style={styles.sectionTitle}>Weekend Escapes</ThemedText>
+            <Pressable onPress={() => handleSeeAllPress("Weekend Escapes")}>
+              <ThemedText type="link" lightColor={Colors.light.primary} darkColor={Colors.dark.primary}>
+                See All
+              </ThemedText>
+            </Pressable>
+          </View>
+          {allLoading ? (
+            <LoadingPlaceholder />
+          ) : (
+            <FlatList
+              horizontal
+              data={weekendEscapes}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item, index }) => (
+                <PlaceCard item={item} index={index} onPress={() => handlePlacePress(item.id)} />
+              )}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              snapToInterval={PLACE_CARD_WIDTH + Spacing.md}
+              decelerationRate="fast"
+            />
           )}
         </View>
       </ScrollView>
+
+      <FloatingNearbyButton onPress={handleNearbyPress} />
     </View>
   );
 }
@@ -344,13 +582,33 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
-  heroTitle: {
+  greetingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  greetingText: {
     marginBottom: Spacing.xs,
   },
-  heroSubtitle: {
+  greetingSubtext: {
     opacity: 0.8,
+  },
+  locationChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+  },
+  locationText: {
+    fontWeight: "500",
+  },
+  searchContainer: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
   },
   section: {
     marginBottom: Spacing.xl,
@@ -362,87 +620,156 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
   },
+  sectionTitle: {
+    color: Colors.light.navy,
+  },
   horizontalList: {
     paddingHorizontal: Spacing.lg,
   },
-  trendingCard: {
-    width: CARD_WIDTH,
+  heroCard: {
+    width: HERO_CARD_WIDTH,
     height: 200,
     marginRight: Spacing.md,
     borderRadius: BorderRadius.xl,
     overflow: "hidden",
   },
-  trendingImage: {
+  heroImage: {
     width: "100%",
     height: "100%",
   },
-  trendingOverlay: {
+  heroOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
-  trendingContent: {
+  heroContent: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     padding: Spacing.md,
   },
-  trendingBadge: {
+  heroBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     alignSelf: "flex-start",
+    backgroundColor: Colors.light.primary,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-    marginBottom: Spacing.xs,
-  },
-  trendingBadgeText: {
-    fontWeight: "600",
-  },
-  trendingTitle: {
-    fontWeight: "700",
-  },
-  recommendedList: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.md,
-  },
-  recommendedCard: {
-    marginBottom: 0,
-  },
-  recommendedHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
     marginBottom: Spacing.sm,
   },
-  recommendedTitleContainer: {
-    flex: 1,
-  },
-  categoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: Spacing.xs,
-  },
-  categoryDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: Spacing.xs,
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-  },
-  ratingText: {
-    marginLeft: Spacing.xs,
+  heroBadgeText: {
     fontWeight: "600",
   },
-  recommendedDescription: {
-    marginBottom: Spacing.md,
+  heroTitle: {
+    fontWeight: "700",
+    marginBottom: Spacing.xs,
   },
-  recommendedActions: {
+  heroLocationRow: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  heroLocation: {
+    fontWeight: "500",
+  },
+  placeCard: {
+    width: PLACE_CARD_WIDTH,
+    height: PLACE_CARD_WIDTH * 1.25,
+    marginRight: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    overflow: "hidden",
+  },
+  placeImage: {
+    width: "100%",
+    height: "100%",
+  },
+  placeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  placeContent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: Spacing.sm,
+  },
+  placeTitle: {
+    fontWeight: "600",
+    marginBottom: Spacing.xs,
+  },
+  placeMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ratingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.xs,
+    gap: 2,
+  },
+  ratingText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  gemBadge: {
+    position: "absolute",
+    top: Spacing.sm,
+    right: Spacing.sm,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.light.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  neighborhoodCard: {
+    width: 140,
+    height: 100,
+    marginRight: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    overflow: "hidden",
+  },
+  neighborhoodImage: {
+    width: "100%",
+    height: "100%",
+  },
+  neighborhoodOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  neighborhoodContent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: Spacing.sm,
+  },
+  neighborhoodName: {
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  neighborhoodCount: {
+    fontSize: 11,
+  },
+  floatingButton: {
+    position: "absolute",
+    bottom: 100,
+    alignSelf: "center",
+    borderRadius: BorderRadius.full,
+    overflow: "hidden",
+  },
+  floatingButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  floatingButtonText: {
+    fontWeight: "600",
   },
   loadingContainer: {
     height: 200,
