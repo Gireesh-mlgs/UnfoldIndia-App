@@ -1,195 +1,231 @@
-# Design Guidelines: Premium Glassmorphic Mobile App
+# Design Guidelines: Unfold India
 
-## Architecture Decisions
-
-### Authentication
-**No authentication required** - This is a UI showcase app with local data.
-- Include a Profile screen with:
-  - User-customizable circular avatar
-  - Display name field
-  - App preferences (theme toggle for light/dark mode)
-  - Stats cards showing dummy metrics
-
-### Navigation
-**Tab Navigation** with 4 tabs:
-- Home (house icon)
-- Explore (search/compass icon)
-- Floating Action Button (plus icon with glow)
-- Profile (user icon)
-
-The FAB should be positioned in the center gap of the tab bar with elevated shadow and glow effect.
-
-**Navigation Stack:**
-- Splash Screen → auto-transitions to Home after animation
-- Home Screen (Tab 1)
-- Explore Screen (Tab 2)
-- Profile Screen (Tab 3)
-- All screens use transparent/blurred headers where applicable
+## Brand Overview
+**App Name:** Unfold India  
+**Tagline:** Discover India's hidden gems  
+**Tone:** Warm, curious, helpful, and slightly playful  
+**Focus:** Travel discovery app focused on India, with current emphasis on Delhi & Delhi NCR
 
 ---
 
-## Visual Design System
+## Color Palette
 
-### Color Palette
-**Gradients (Primary theme):**
-- Purple to Blue: `['#8B5CF6', '#3B82F6']`
-- Purple to Pink: `['#A855F7', '#EC4899']`
-- Blue to Cyan: `['#3B82F6', '#06B6D4']`
-- Neon accent: `['#F59E0B', '#EF4444']` for CTAs
+### Primary Colors
+- **Saffron/Marigold:** `#F5A623` (primary accent, CTAs, active states)
+- **Deep Navy/Indigo:** `#24314A` (contrast, headers, text)
+- **Warm Ivory:** `#FFFBF5` (light mode background)
+- **Slate Gray:** `#64748B` (secondary text, subtle elements)
 
-**Light Mode:**
-- Background: White with gradient overlays
-- Card backgrounds: Semi-transparent white (rgba(255, 255, 255, 0.15))
-- Text primary: `#1F2937`
+### Semantic Colors
+- **Success:** `#22C55E`
+- **Warning:** `#F59E0B`
+- **Error:** `#EF4444`
+
+### Light Mode
+- Background: Warm ivory `#FFFBF5`
+- Card backgrounds: Semi-transparent white with blur
+- Text primary: Navy `#24314A`
 - Text secondary: `#6B7280`
 
-**Dark Mode:**
-- Background: `#0F172A` with gradient overlays
-- Card backgrounds: Semi-transparent dark (rgba(255, 255, 255, 0.05))
+### Dark Mode
+- Background: Deep navy `#0F172A`
+- Card backgrounds: Semi-transparent dark with blur
 - Text primary: `#F9FAFB`
 - Text secondary: `#9CA3AF`
 
-### Typography
-**Fonts:** Poppins (headings), Inter (body)
-- H1: Poppins Bold, 32px
-- H2: Poppins SemiBold, 24px
-- H3: Poppins Medium, 20px
-- Body: Inter Regular, 16px
-- Caption: Inter Regular, 14px
+### Gradients
+- **Saffron Gold:** `['#F5A623', '#D4890F']`
+- **Saffron Warm:** `['#F5A623', '#FF6B35']`
+- **Navy Indigo:** `['#24314A', '#1E3A5F']`
+- **Hero Overlay:** `['rgba(36, 49, 74, 0.7)', 'rgba(36, 49, 74, 0.3)']`
 
-### Glassmorphism Specifications
-**All cards must use:**
-- Background: Semi-transparent with blur
-- Blur intensity: 20-40 (BlurView)
+---
+
+## Typography
+
+### Scale
+- **H1:** 32px, Bold - Major headings
+- **H2:** 24px, SemiBold - Section titles
+- **H3:** 20px, Medium - Subsections
+- **H4:** 18px, Medium - Card titles
+- **Body:** 16px, Regular - Main content
+- **Small:** 14px, Regular - Secondary info
+- **Caption:** 12px, Regular - Labels, timestamps
+
+---
+
+## Navigation
+
+### Bottom Tab Bar (5 tabs)
+1. **Explore** (compass icon) - Home/discover
+2. **Route** (map-pin icon) - Map & planner
+3. **Chat** (message-circle icon) - AI travel assistant
+4. **Recommendations** (heart icon) - Personalized feed
+5. **Profile** (user icon) - Saved places & settings
+
+Active tab: Saffron accent color `#F5A623`
+Tab bar: Blurred background on iOS, solid on Android
+
+### Global Search Bar
+- Persistent at top of main screens
+- Placeholder: "Search Delhi, monuments, cafes, trails..."
+- Voice input icon on right
+- Soft shadow with subtle navy tint
+
+---
+
+## Card & Component Specifications
+
+### Place Cards
+- Border radius: 16-20px
+- Soft shadow (elevation 6)
+- Image with gradient overlay at bottom
+- Title, subtitle, rating, distance
+- Quick action icons (save, route, share)
+- "Hidden Gem" badge with star icon (if applicable)
+
+### Glass Cards
+- Semi-transparent background with blur
 - Border: 1px solid rgba(255, 255, 255, 0.2)
-- Border radius: 30px minimum
-- Backdrop filter effect for frosted glass look
+- Blur intensity: 20-40
+- Border radius: 20px minimum
 
-**Shadow specifications for glass cards:**
-- shadowColor: '#000'
-- shadowOffset: { width: 0, height: 10 }
-- shadowOpacity: 0.15
-- shadowRadius: 20
-- elevation: 10 (Android)
+### Buttons
+- Primary: Saffron gradient background
+- Border radius: 12-16px
+- Height: 52px for main CTAs
+- Soft glow shadow matching saffron
 
-### Spacing System
-- XS: 4px
-- SM: 8px
-- MD: 16px
-- LG: 24px
-- XL: 32px
-- XXL: 48px
+### Chips/Tags
+- Pill-shaped (border radius full)
+- Category-specific colors
+- Padding: 8px 16px
 
-Use generous spacing throughout - minimum 16px padding inside cards, 24px between major sections.
-
-### Interactive Elements
-**Floating Action Button:**
-- Size: 64px × 64px
-- Border radius: 32px
-- Gradient background (purple to pink)
-- Glow effect:
-  - shadowColor: '#A855F7'
-  - shadowOffset: { width: 0, height: 4 }
-  - shadowOpacity: 0.5
-  - shadowRadius: 16
-- Scale animation on press (0.95)
-
-**Buttons (Neon style):**
-- Border radius: 20px
-- Gradient backgrounds
-- Soft glow shadow matching gradient color
-- Pulse animation on press
-
-**All touchables:**
-- Opacity change on press (0.7)
-- Scale animation (subtle, 0.98-1.0)
-- Haptic feedback
+### Badges
+- "Hidden Gem" - Star icon with gold accent
+- "Local Pick" - Map pin with saffron
+- Small, positioned top-right of cards
 
 ---
 
 ## Screen Specifications
 
-### 1. Splash Screen
-**Purpose:** Branded loading experience with smooth transition
+### 1. Onboarding (3 screens)
+**Screen 1:** Welcome
+- Full-bleed hero image (Delhi skyline) with dark gradient overlay
+- "Unfold India" title with tagline
+- CTA: "Get Started"
 
-**Layout:**
-- Full-screen gradient background (purple to blue diagonal)
-- Centered animated logo (fade-in, scale from 0.8 to 1.0)
-- Auto-transition to Home after 2.5 seconds with fade animation
+**Screen 2:** Features
+- Brief intro to: Explore / Routes / AI Chatbot / Personalized Picks
+- Simple illustrations or icons for each
 
-**No header, no safe area constraints**
+**Screen 3:** Permissions
+- Location permission request
+- Interest preferences (food, culture, outdoors, nightlife)
+- CTA: "Enable & Continue"
 
-### 2. Home Screen
-**Purpose:** Main content hub with trending and recommended sections
-
+### 2. Explore (Home)
 **Header:**
-- Transparent with blur effect
-- Animated slide-down on mount
-- Title: "Discover" (left-aligned)
-- Right button: Theme toggle icon
+- Greeting text with time-based message
+- Global search bar
+- Location chip (Delhi NCR) + filter button
 
-**Content (Scrollable):**
-- Top: Animated header text (fade + slide)
-- Horizontal scroll section: "Trending" (glassmorphic cards, 280px wide)
-- Vertical section: "Recommended" (full-width glass cards)
-- Each card: image, title, subtitle, gradient accent
+**Content:**
+- Hero carousel: "Top Picks Today" horizontal scroll
+- Sections: "Hidden Gems Near You", "Local Picks by Neighborhood", "Weekend Escapes"
+- Each section with horizontal scroll cards
+- Floating "Nearby" button opens map
 
-**Safe area insets:**
-- Top: headerHeight + 32px
-- Bottom: tabBarHeight + 32px
+### 3. Place Detail
+- Large parallax hero image with gradient overlay
+- Info chips: Category, hours, best time, entry fee
+- Quick actions row: Save, Route, Call, Share
+- "Why it's a hidden gem" blurb with Local Tip
+- Reviews section
+- Similar places carousel
 
-### 3. Explore Screen
-**Purpose:** Search and browse categories
+### 4. Route (Map & Planner)
+- Fullscreen map with clustered pins
+- Collapsible planner panel (drag up)
+- Add stops, choose transport mode
+- Sample routes with estimated times
+- Start navigation / Save route buttons
 
-**Header:**
-- Transparent
-- Search bar with soft glow effect (blur background, rounded 25px)
-- Search bar shadow: subtle cyan/blue glow
+### 5. Chat (AI Assistant)
+- Conversational UI with message bubbles
+- Header: "UnfoldBot" avatar
+- Quick prompts above keyboard
+- Support buttons: Show on map, Add to route, Save place
 
-**Content (Scrollable):**
-- Category chips (horizontal scroll, pill-shaped, gradient backgrounds)
-- Grid layout: 2 columns of aesthetic cards
-- Each card: image overlay, glassmorphic bottom section with text
+### 6. Recommendations Feed
+- AI-driven personalized cards
+- Explanation text: "Because you liked..." or "Popular with locals"
+- Filter toggles: Hidden gems only, Family-friendly, Budget
+- "Local Stories" micro-articles
 
-**Safe area insets:**
-- Top: headerHeight + 32px
-- Bottom: tabBarHeight + 32px
-
-### 4. Profile Screen
-**Purpose:** User profile and settings
-
-**Header:**
-- Transparent
-- Title: "Profile"
-- Right button: Settings gear icon
-
-**Content (Scrollable):**
-- Circular avatar (120px, gradient border, centered)
-- Display name (centered, H2)
-- Stats cards (horizontal row, glassmorphic, showing dummy metrics)
-- Settings list: theme toggle, notifications, about
-- Each list item: icon, label, chevron, with glass background
-
-**Safe area insets:**
-- Top: headerHeight + 32px
-- Bottom: tabBarHeight + 32px
+### 7. Profile / Saved
+- Tabs: Saved Places, My Routes, Preferences, Help & About
+- Settings: Region preference, privacy, notifications, language
 
 ---
 
-## Animation Specifications
-**Screen transitions:** Fade + slide (300ms, easeInOut)
-**Card entry:** Stagger fade-in from bottom (150ms delay each)
-**FAB:** Rotate on press (360° with spring)
-**List items:** Scale on press (0.98)
-**Theme toggle:** Smooth cross-fade (400ms)
+## Animations & Interactions
 
-Use Reanimated for all animations to ensure 60fps performance.
+- Card press: Scale to 0.98 with spring
+- FAB: Rotate on press with spring animation
+- Screen transitions: 300ms ease-out
+- Heart/save toggle: Burst animation
+- List items: Staggered fade-in on load
+- Loading states: Skeleton placeholders
 
 ---
 
-## Assets Required
-- App logo (centered icon for splash, modern/abstract design)
-- Category images (6 placeholder images for Explore grid)
-- Profile avatar placeholder (gradient circle with initials)
+## Spacing System
+- XS: 4px
+- SM: 8px
+- MD: 16px
+- LG: 24px
+- XL: 32px
+- 2XL: 48px
 
-Use Feather icons from @expo/vector-icons for all UI icons.
+Use generous spacing - minimum 16px padding inside cards, 24px between major sections.
+
+---
+
+## Iconography
+Use Feather icons from @expo/vector-icons:
+- Rounded, simple line style
+- Size 24px for standard, 20px for smaller contexts
+- Accent icons for badges (star, map-pin)
+
+---
+
+## Category Colors
+- **Food:** `#F5A623` to `#FF6B35`
+- **Culture:** `#8B5CF6` to `#6366F1`
+- **Nature:** `#22C55E` to `#10B981`
+- **Nightlife:** `#EC4899` to `#F43F5E`
+- **Shopping:** `#3B82F6` to `#06B6D4`
+- **Experiences:** `#F59E0B` to `#EF4444`
+
+---
+
+## Sample Delhi/NCR Content
+
+### Featured Neighborhoods
+- Connaught Place
+- Hauz Khas Village
+- Mehrauli/Qutub
+- Chandni Chowk (Old Delhi)
+- Dilli Haat
+- Lodhi Gardens
+- Khan Market
+- Gurugram Cyber Hub
+- Noida Sector 18
+
+### Hidden Gems Examples
+- Nanha Park - Colonial-era pocket near Lodhi Garden
+- Hauz Khas Hidden Alley - Rooftop cafes with lake view
+- Stepwells of Mehrauli - Restored baolis off beaten path
+- Paharganj Street Food Lane - Local favourites, budget-friendly

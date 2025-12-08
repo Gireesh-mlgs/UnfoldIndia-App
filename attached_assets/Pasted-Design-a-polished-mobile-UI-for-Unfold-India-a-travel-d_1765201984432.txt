@@ -1,0 +1,156 @@
+Design a polished mobile UI for Unfold India — a travel discovery app focused on India with current emphasis on Delhi & Delhi NCR. The app should feel premium, friendly, and exploratory. Build high-fidelity screens for onboarding, home/explore, map/route planner, place detail, recommendations feed, in-app chatbot (travel assistant), saved places, and profile/settings.
+
+Brand & visual direction
+
+App name: Unfold India (use titlecase in logo).
+
+Tone: warm, curious, helpful, and slightly playful.
+
+Color palette: warm saffron (#F5A623) or deep marigold accents, muted indigo/navy for contrast (#24314A), warm neutrals (ivory / off-white), and soft slate grays. Use bright accent for CTAs.
+
+Background: a large full-bleed photographic hero image (e.g., faded landscape or Delhi landmark) with a deep gradient overlay and low opacity so UI elements float clearly — like Agoda’s faded-photo background. Keep photo subtle behind content (opacity ~12–25%).
+
+Typography: clean geometric sans for headings, friendly humanist sans for body. Clear scale: H1-H3, body, small.
+
+Iconography: simple line icons with rounded corners; accent icons for “hidden gem” / “local pick” badges.
+
+Corners & shadows: 12–20px rounded cards, soft shadows, elevated floating CTA.
+
+UX / Navigation
+
+Bottom navigation with 5 tabs: Explore (home), Route (map & planner), Chat (AI travel assistant), Recommendations (personalized feed), Profile (saved places & settings). Active tab accent color saffron.
+
+Persistent top search bar (global) with placeholder “Search Delhi, monuments, cafes, trails…” and voice input icon.
+
+Smooth transitions: card-to-detail shared element animations, map panning, swipe-to-save gestures.
+
+Screens / components (describe each precisely)
+
+Onboarding (3 screens)
+
+Screen 1: Welcome “Unfold India — Discover India’s hidden gems” with faded background (Delhi skyline or warm landscape). CTA: Get started.
+
+Screen 2: Feature quicks — Explore / Routes / Local chatbot / Personalized picks. Small illustrations.
+
+Screen 3: Location permission + preferences (history, interests: food, culture, outdoors, nightlife). CTA: Enable.
+
+Explore (Home)
+
+Top: greeting + search bar + location chip (Delhi NCR) + filter button.
+
+Hero carousel: “Top picks today — Delhi NCR” horizontal cards with photos, distance, short category tags. Each card has a “hidden gem” badge if applicable.
+
+Sections stacked vertically: “Hidden gems near you”, “Local picks — Delhi neighborhoods (Connaught Place, Hauz Khas, Shahdara)”, “Weekend escapes”. Each item is a card with image, 3-line summary, rating, time to reach, and quick actions (save, route, share).
+
+Quick-action floating button: “Nearby” — opens map with current pins.
+
+Route (Map & Planner)
+
+Fullscreen map with clustered pins. Top collapsible planner panel (drag up to expand).
+
+Planner: add stops, choose transport mode (walk, drive, metro), estimated travel times & suggested order (optimize for minimal travel). Show sample route: “Historic Walk — Red Fort -> Jama Masjid -> Chandni Chowk lane”.
+
+Turn-by-turn preview card with estimated time and fare suggestions (auto/ride-share, metro). Button: Start navigation / Save route.
+
+Chat (AI Travel Assistant)
+
+Conversational UI with message bubbles; header shows assistant avatar “UnfoldBot”.
+
+Suggested quick prompts above keyboard: “Find best breakfast near me”, “Plan 4-hour Delhi itinerary”, “Hidden rooftop cafes in Gurgaon”.
+
+Support buttons: “Show on map”, “Add to route”, “Save place”.
+
+Pre-seeded example: user asks “I have 5 hours in Connaught Place — suggest a walk.” Bot returns 3-stop route, durations, and a short cultural tip.
+
+Recommendations (Personalized feed)
+
+AI-driven cards mixing curated editorial picks and algorithmic suggestions. Cards show why recommended: “Because you liked: street food” or “Popular with locals”.
+
+Toggle: Show only hidden gems / Show family-friendly / Budget options.
+
+“Local Stories” micro-articles (2–3 sentence intros + read more) highlighting neighborhood culture.
+
+Place Detail
+
+Large banner image with parallax and faded background effect beneath header.
+
+Info chips: category, hours, best time to visit, entry fee, local tips.
+
+Quick actions row: Save, Route, Call, Share, Book (if applicable).
+
+Why it’s a hidden gem: short human-written blurb + “Local tip” with icon.
+
+Reviews: short user review snippets and community photos.
+
+Similar places carousel.
+
+Profile / Saved
+
+Tabs: Saved Places, My Routes, Preferences, Help & About Unfold India.
+
+Settings include region preference (focus Delhi NCR), privacy, notification frequency, language (English/Hindi).
+
+Include Founder & Contact links (for About page use: social links formatting; if you want I can generate exact copy).
+
+Micro-interactions & polish
+
+Smooth card hover lift on press; subtle spring animation for FAB.
+
+Heart/save toggles animate with small burst.
+
+Loading skeletons for feed and map clustering animation.
+
+Accessibility: large tap targets, readable contrast, alt text for images.
+
+Offline fallback: cache saved places & cached map tiles.
+
+Delhi / Delhi NCR sample content (to include initially)
+
+Featured neighborhoods: Connaught Place, Hauz Khas Village, Mehrauli/ Qutub, Chandni Chowk (old Delhi), Dilli Haat, Lodhi Gardens, Hauz Khas lake, Khan Market, Gurugram Cyber Hub, Noida Sector 18 market.
+
+Hidden gem examples (short blurbs):
+
+“Nanha Park — a quiet colonial-era pocket near Lodhi Garden with artisan stalls.”
+
+“Hauz Khas Hidden Alley — rooftop cafés with lake view away from the main crowds.”
+
+“Stepwells of Mehrauli — small restored baolis off the beaten path.”
+
+“Street food lane in Paharganj — local favourites at pocket-friendly prices.”
+Include tags: culture, food, nature, budget, family.
+
+Data & functionality checklist (make sure works)
+
+Location permissions and fallback (user can set city manually).
+
+Map pin clustering and smooth pan/zoom.
+
+Save places persists offline to local storage.
+
+Route optimization for multiple stops.
+
+Chatbot integration point (placeholder UI ready to connect to an API like OpenAI / Dialogflow). Provide quick-action intents (add-to-route, open-place, share).
+
+Recommendation engine hooks: user interests + recent activity + saved places; show explanation sentence for each recommendation.
+
+Share deep links to places and routes.
+
+Assets & imagery guidance
+
+Use royalty-free Indian landscape and city photos with consistent color grade (warm tone).
+
+Background hero images should be desaturated and blurred slightly (Gaussian blur ~6–10px) then overlaid with gradient (darken bottom) so white text reads clearly.
+
+Motion & animation
+
+Use subtle cross-fades, 150–300ms ease-out for modals, 350–600ms spring for major transitions.
+
+Shared element transition from list card → place detail image.
+
+Deliverables
+
+Provide high-fidelity mockups for: Onboarding, Explore, Place Detail, Map/Route Planner (expanded), Chatbot conversation, Recommendations feed, Profile.
+
+Provide style token file (colors, typography, spacing) and component library (card, button, chip, badge, FAB).
+
+Provide a short handoff note explaining API endpoints to wire: search, place detail, save, route optimization, chatbot, user prefs.
