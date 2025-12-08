@@ -1,31 +1,33 @@
 import React from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { View, StyleSheet, Pressable, Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 
 import HomeStackNavigator from "@/navigation/HomeStackNavigator";
 import ExploreStackNavigator from "@/navigation/ExploreStackNavigator";
 import ProfileStackNavigator from "@/navigation/ProfileStackNavigator";
+import ActionScreen from "@/screens/ActionScreen";
 import { useTheme } from "@/hooks/useTheme";
-import { Gradients, Shadows, BorderRadius, Spacing } from "@/constants/theme";
+import { Gradients, Shadows, BorderRadius } from "@/constants/theme";
 
 export type MainTabParamList = {
   HomeTab: undefined;
   ExploreTab: undefined;
+  ActionTab: undefined;
   ProfileTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-function FloatingActionButton() {
+function CustomTabBarButton({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
 
@@ -42,9 +44,19 @@ function FloatingActionButton() {
     rotation.value = withSpring(rotation.value + 90);
   };
 
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onPress?.();
+  };
+
   return (
-    <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
-      <Animated.View style={[styles.fabContainer, animatedStyle]}>
+    <Pressable
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.fabWrapper}
+    >
+      <Animated.View style={[styles.fabContainer, Shadows.fab, animatedStyle]}>
         <LinearGradient
           colors={Gradients.purplePink}
           start={{ x: 0, y: 0 }}
@@ -114,6 +126,15 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen
+        name="ActionTab"
+        component={ActionScreen}
+        options={{
+          title: "",
+          tabBarIcon: () => null,
+          tabBarButton: (props) => <CustomTabBarButton {...props} />,
+        }}
+      />
+      <Tab.Screen
         name="ProfileTab"
         component={ProfileStackNavigator}
         options={{
@@ -128,8 +149,12 @@ export default function MainTabNavigator() {
 }
 
 const styles = StyleSheet.create({
+  fabWrapper: {
+    top: -20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   fabContainer: {
-    ...Shadows.fab,
     borderRadius: BorderRadius.full,
   },
   fab: {
