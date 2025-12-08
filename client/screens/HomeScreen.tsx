@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -6,13 +6,13 @@ import {
   FlatList,
   Dimensions,
   Pressable,
-  Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import Animated, {
@@ -24,26 +24,21 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
 import { GlassCard } from "@/components/GlassCard";
 import { GradientButton } from "@/components/GradientButton";
 import { Spacing, BorderRadius, Shadows, Gradients } from "@/constants/theme";
-import {
-  trendingItems,
-  recommendedItems,
-  TrendingItem,
-  RecommendedItem,
-} from "@/data/mockData";
+import { useTrendingItems, useRecommendedItems, Item } from "@/hooks/useItems";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.7;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function TrendingCard({ item, index }: { item: TrendingItem; index: number }) {
-  const { isDark } = useTheme();
+function TrendingCard({ item, index }: { item: Item; index: number }) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(30);
   const scale = useSharedValue(1);
@@ -76,6 +71,9 @@ function TrendingCard({ item, index }: { item: TrendingItem; index: number }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const gradientStart = item.gradientStart || "#8B5CF6";
+  const gradientEnd = item.gradientEnd || "#EC4899";
+
   return (
     <AnimatedPressable
       onPress={handlePress}
@@ -97,7 +95,7 @@ function TrendingCard({ item, index }: { item: TrendingItem; index: number }) {
         <View
           style={[
             styles.trendingBadge,
-            { backgroundColor: item.gradient[0] + "40" },
+            { backgroundColor: gradientStart + "40" },
           ]}
         >
           <ThemedText
@@ -106,7 +104,7 @@ function TrendingCard({ item, index }: { item: TrendingItem; index: number }) {
             lightColor="#FFFFFF"
             darkColor="#FFFFFF"
           >
-            {item.subtitle}
+            {item.subtitle || "Featured"}
           </ThemedText>
         </View>
         <ThemedText
@@ -126,10 +124,9 @@ function RecommendedCard({
   item,
   index,
 }: {
-  item: RecommendedItem;
+  item: Item;
   index: number;
 }) {
-  const { theme, isDark } = useTheme();
   const opacity = useSharedValue(0);
   const translateX = useSharedValue(-30);
 
@@ -153,17 +150,19 @@ function RecommendedCard({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const rating = item.rating ? (item.rating / 10).toFixed(1) : "4.5";
+
   return (
     <Animated.View style={animatedStyle}>
       <GlassCard onPress={handlePress} style={styles.recommendedCard}>
         <View style={styles.recommendedHeader}>
-          <View>
+          <View style={styles.recommendedTitleContainer}>
             <ThemedText type="h4">{item.title}</ThemedText>
             <View style={styles.categoryRow}>
               <View
                 style={[
                   styles.categoryDot,
-                  { backgroundColor: "#8B5CF6" },
+                  { backgroundColor: item.gradientStart || "#8B5CF6" },
                 ]}
               />
               <ThemedText
@@ -171,14 +170,14 @@ function RecommendedCard({
                 lightColor="#6B7280"
                 darkColor="#9CA3AF"
               >
-                {item.category}
+                {item.subtitle || "Collection"}
               </ThemedText>
             </View>
           </View>
           <View style={styles.ratingContainer}>
             <Feather name="star" size={14} color="#F59E0B" />
             <ThemedText type="small" style={styles.ratingText}>
-              {item.rating}
+              {rating}
             </ThemedText>
           </View>
         </View>
@@ -187,8 +186,9 @@ function RecommendedCard({
           style={styles.recommendedDescription}
           lightColor="#6B7280"
           darkColor="#9CA3AF"
+          numberOfLines={2}
         >
-          {item.description}
+          {item.description || "Discover this amazing collection."}
         </ThemedText>
         <View style={styles.recommendedActions}>
           <GradientButton
@@ -202,11 +202,32 @@ function RecommendedCard({
   );
 }
 
+function LoadingPlaceholder() {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={theme.tint} />
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme, isDark } = useTheme();
+  const queryClient = useQueryClient();
+
+  const { data: trendingItems, isLoading: trendingLoading, refetch: refetchTrending } = useTrendingItems();
+  const { data: recommendedItems, isLoading: recommendedLoading, refetch: refetchRecommended } = useRecommendedItems();
+
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchTrending(), refetchRecommended()]);
+    setRefreshing(false);
+  }, [refetchTrending, refetchRecommended]);
 
   const headerOpacity = useSharedValue(0);
   const headerTranslateY = useSharedValue(-20);
@@ -220,6 +241,8 @@ export default function HomeScreen() {
     opacity: headerOpacity.value,
     transform: [{ translateY: headerTranslateY.value }],
   }));
+
+  const isLoading = trendingLoading || recommendedLoading;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -235,6 +258,13 @@ export default function HomeScreen() {
         }}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.tint}
+          />
+        }
       >
         <Animated.View style={[styles.headerSection, headerAnimatedStyle]}>
           <ThemedText type="h1" style={styles.heroTitle}>
@@ -261,18 +291,22 @@ export default function HomeScreen() {
               </ThemedText>
             </Pressable>
           </View>
-          <FlatList
-            horizontal
-            data={trendingItems}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item, index }) => (
-              <TrendingCard item={item} index={index} />
-            )}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalList}
-            snapToInterval={CARD_WIDTH + Spacing.md}
-            decelerationRate="fast"
-          />
+          {trendingLoading ? (
+            <LoadingPlaceholder />
+          ) : (
+            <FlatList
+              horizontal
+              data={trendingItems || []}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item, index }) => (
+                <TrendingCard item={item} index={index} />
+              )}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              snapToInterval={CARD_WIDTH + Spacing.md}
+              decelerationRate="fast"
+            />
+          )}
         </View>
 
         <View style={styles.section}>
@@ -286,11 +320,15 @@ export default function HomeScreen() {
               </ThemedText>
             </Pressable>
           </View>
-          <View style={styles.recommendedList}>
-            {recommendedItems.map((item, index) => (
-              <RecommendedCard key={item.id} item={item} index={index} />
-            ))}
-          </View>
+          {recommendedLoading ? (
+            <LoadingPlaceholder />
+          ) : (
+            <View style={styles.recommendedList}>
+              {(recommendedItems || []).map((item, index) => (
+                <RecommendedCard key={item.id} item={item} index={index} />
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -374,6 +412,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: Spacing.sm,
   },
+  recommendedTitleContainer: {
+    flex: 1,
+  },
   categoryRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -402,5 +443,10 @@ const styles = StyleSheet.create({
   },
   recommendedActions: {
     flexDirection: "row",
+  },
+  loadingContainer: {
+    height: 200,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

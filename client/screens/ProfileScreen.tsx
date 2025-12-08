@@ -1,10 +1,9 @@
 import React, { useEffect } from "react";
-import { View, StyleSheet, ScrollView, Platform } from "react-native";
+import { View, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -16,17 +15,21 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 import { ThemedText } from "@/components/ThemedText";
 import { StatsCard } from "@/components/StatsCard";
 import { SettingsItem } from "@/components/SettingsItem";
+import { GradientButton } from "@/components/GradientButton";
 import { Spacing, BorderRadius, Shadows, Gradients } from "@/constants/theme";
-import { userStats } from "@/data/mockData";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme, isDark, toggleTheme } = useTheme();
+  const { user, isAuthenticated, logout, refreshUser } = useAuth();
+
+  const [refreshing, setRefreshing] = React.useState(false);
 
   const avatarScale = useSharedValue(0);
   const contentOpacity = useSharedValue(0);
@@ -53,13 +56,30 @@ export default function ProfileScreen() {
     transform: [{ translateY: contentTranslateY.value }],
   }));
 
-  const handleNotificationsToggle = (value: boolean) => {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshUser();
+    setRefreshing(false);
+  };
+
+  const handleNotificationsToggle = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const handleSettingsPress = (setting: string) => {
+  const handleSettingsPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
+
+  const handleLogout = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await logout();
+  };
+
+  const displayName = user?.displayName || user?.username || "Guest User";
+  const username = user?.username || "guest";
+  const initials = displayName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "GU";
+
+  const stats = user?.stats || { collections: 0, favorites: 0, following: 0 };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -75,6 +95,13 @@ export default function ProfileScreen() {
         }}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.tint}
+          />
+        }
       >
         <Animated.View style={[styles.avatarSection, avatarAnimatedStyle]}>
           <View style={[styles.avatarContainer, Shadows.glass]}>
@@ -102,14 +129,14 @@ export default function ProfileScreen() {
                     lightColor="#FFFFFF"
                     darkColor="#FFFFFF"
                   >
-                    JD
+                    {initials}
                   </ThemedText>
                 </LinearGradient>
               </View>
             </LinearGradient>
           </View>
           <ThemedText type="h2" style={styles.userName}>
-            John Doe
+            {displayName}
           </ThemedText>
           <ThemedText
             type="body"
@@ -117,26 +144,26 @@ export default function ProfileScreen() {
             lightColor="#6B7280"
             darkColor="#9CA3AF"
           >
-            @johndoe
+            @{username}
           </ThemedText>
         </Animated.View>
 
         <Animated.View style={[styles.statsSection, contentAnimatedStyle]}>
           <View style={styles.statsRow}>
             <StatsCard
-              value={userStats.collections}
+              value={stats.collections.toString()}
               label="Collections"
               gradient={Gradients.purpleBlue}
             />
             <View style={{ width: Spacing.md }} />
             <StatsCard
-              value={userStats.favorites}
+              value={stats.favorites.toString()}
               label="Favorites"
               gradient={Gradients.purplePink}
             />
             <View style={{ width: Spacing.md }} />
             <StatsCard
-              value={userStats.following}
+              value={stats.following.toString()}
               label="Following"
               gradient={Gradients.blueCyan}
             />
@@ -166,12 +193,12 @@ export default function ProfileScreen() {
             <SettingsItem
               icon="shield"
               label="Privacy"
-              onPress={() => handleSettingsPress("privacy")}
+              onPress={handleSettingsPress}
             />
             <SettingsItem
               icon="help-circle"
               label="Help & Support"
-              onPress={() => handleSettingsPress("help")}
+              onPress={handleSettingsPress}
               isLast
             />
           </View>
@@ -185,24 +212,35 @@ export default function ProfileScreen() {
             <SettingsItem
               icon="user"
               label="Edit Profile"
-              onPress={() => handleSettingsPress("profile")}
+              onPress={handleSettingsPress}
               isFirst
             />
             <SettingsItem
               icon="credit-card"
               label="Subscription"
               value="Premium"
-              onPress={() => handleSettingsPress("subscription")}
+              onPress={handleSettingsPress}
             />
             <SettingsItem
               icon="info"
               label="About"
               value="v1.0.0"
-              onPress={() => handleSettingsPress("about")}
+              onPress={handleSettingsPress}
               isLast
             />
           </View>
         </Animated.View>
+
+        {isAuthenticated ? (
+          <Animated.View style={[styles.logoutSection, contentAnimatedStyle]}>
+            <GradientButton
+              title="Sign Out"
+              onPress={handleLogout}
+              gradient={["#EF4444", "#DC2626"]}
+              style={styles.logoutButton}
+            />
+          </Animated.View>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -268,5 +306,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  logoutSection: {
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+  },
+  logoutButton: {
+    width: "100%",
   },
 });

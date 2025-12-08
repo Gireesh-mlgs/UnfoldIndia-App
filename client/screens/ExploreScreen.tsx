@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
-  FlatList,
   Dimensions,
   Pressable,
   Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -29,7 +30,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { SearchBar } from "@/components/SearchBar";
 import { CategoryChip } from "@/components/CategoryChip";
 import { Spacing, BorderRadius, Shadows, Gradients } from "@/constants/theme";
-import { categories, exploreItems, ExploreItem } from "@/data/mockData";
+import { useCategories, useItems, Item, Category } from "@/hooks/useItems";
 
 const { width } = Dimensions.get("window");
 const GRID_GAP = Spacing.md;
@@ -37,8 +38,7 @@ const CARD_WIDTH = (width - Spacing.lg * 2 - GRID_GAP) / 2;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function ExploreCard({ item, index }: { item: ExploreItem; index: number }) {
-  const { isDark } = useTheme();
+function ExploreCard({ item, index }: { item: Item; index: number }) {
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.9);
   const pressScale = useSharedValue(1);
@@ -103,7 +103,7 @@ function ExploreCard({ item, index }: { item: ExploreItem; index: number }) {
             lightColor="rgba(255,255,255,0.8)"
             darkColor="rgba(255,255,255,0.8)"
           >
-            {item.category}
+            {item.subtitle || "Collection"}
           </ThemedText>
           <ThemedText
             type="h4"
@@ -119,6 +119,15 @@ function ExploreCard({ item, index }: { item: ExploreItem; index: number }) {
   );
 }
 
+function LoadingPlaceholder() {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={theme.tint} />
+    </View>
+  );
+}
+
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
@@ -126,22 +135,40 @@ export default function ExploreScreen() {
   const { theme, isDark } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("1");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const filteredItems = exploreItems.filter((item) => {
-    const matchesSearch = item.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      activeCategory === "1" ||
-      item.category === categories.find((c) => c.id === activeCategory)?.name;
-    return matchesSearch && matchesCategory;
-  });
+  const { data: categories, isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
+  const { data: allItems, isLoading: itemsLoading, refetch: refetchItems } = useItems({ limit: 50 });
+
+  const filteredItems = useMemo(() => {
+    if (!allItems) return [];
+    
+    return allItems.filter((item) => {
+      const matchesSearch = searchQuery === "" ||
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesCategory = !activeCategory || 
+        activeCategory === "all" || 
+        item.categoryId === activeCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [allItems, searchQuery, activeCategory]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchCategories(), refetchItems()]);
+    setRefreshing(false);
+  }, [refetchCategories, refetchItems]);
 
   const handleCategoryPress = (id: string) => {
-    setActiveCategory(id);
+    setActiveCategory(activeCategory === id ? null : id);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
+
+  const isLoading = categoriesLoading || itemsLoading;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -157,6 +184,13 @@ export default function ExploreScreen() {
         }}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.tint}
+          />
+        }
       >
         <View style={styles.searchContainer}>
           <SearchBar
@@ -166,33 +200,45 @@ export default function ExploreScreen() {
           />
         </View>
 
-        <View style={styles.categoriesContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
-          >
-            {categories.map((category) => (
+        {categoriesLoading ? null : (
+          <View style={styles.categoriesContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesList}
+            >
               <CategoryChip
-                key={category.id}
-                label={category.name}
-                isActive={activeCategory === category.id}
-                gradient={category.gradient}
-                onPress={() => handleCategoryPress(category.id)}
+                label="All"
+                isActive={!activeCategory || activeCategory === "all"}
+                gradient={["#8B5CF6", "#3B82F6"]}
+                onPress={() => handleCategoryPress("all")}
               />
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.gridContainer}>
-          <View style={styles.grid}>
-            {filteredItems.map((item, index) => (
-              <ExploreCard key={item.id} item={item} index={index} />
-            ))}
+              {(categories || []).filter(c => c.name !== "All").map((category) => (
+                <CategoryChip
+                  key={category.id}
+                  label={category.name}
+                  isActive={activeCategory === category.id}
+                  gradient={[category.gradientStart, category.gradientEnd]}
+                  onPress={() => handleCategoryPress(category.id)}
+                />
+              ))}
+            </ScrollView>
           </View>
-        </View>
+        )}
 
-        {filteredItems.length === 0 ? (
+        {itemsLoading ? (
+          <LoadingPlaceholder />
+        ) : (
+          <View style={styles.gridContainer}>
+            <View style={styles.grid}>
+              {filteredItems.map((item, index) => (
+                <ExploreCard key={item.id} item={item} index={index} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {!isLoading && filteredItems.length === 0 ? (
           <View style={styles.emptyState}>
             <ThemedText
               type="body"
@@ -269,6 +315,11 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     padding: Spacing.xl,
+    alignItems: "center",
+  },
+  loadingContainer: {
+    height: 200,
+    justifyContent: "center",
     alignItems: "center",
   },
 });
