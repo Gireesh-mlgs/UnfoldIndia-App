@@ -64,6 +64,9 @@ export const Gradients = {
   darkOverlay: ["rgba(36, 49, 74, 0.9)", "rgba(36, 49, 74, 0.4)"] as const,
   lightOverlay: ["rgba(255, 251, 245, 0.9)", "rgba(255, 251, 245, 0.6)"] as const,
   heroOverlay: ["rgba(36, 49, 74, 0.7)", "rgba(36, 49, 74, 0.3)"] as const,
+  purplePink: ["#8B5CF6", "#EC4899"] as const,
+  purpleBlue: ["#8B5CF6", "#3B82F6"] as const,
+  blueCyan: ["#3B82F6", "#06B6D4"] as const,
 };
 
 export const Spacing = {

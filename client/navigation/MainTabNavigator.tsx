@@ -1,81 +1,34 @@
 import React from "react";
-import { View, StyleSheet, Pressable, Platform } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
 
 import HomeStackNavigator from "@/navigation/HomeStackNavigator";
-import ExploreStackNavigator from "@/navigation/ExploreStackNavigator";
+import RouteScreen from "@/screens/RouteScreen";
+import ChatScreen from "@/screens/ChatScreen";
+import RecommendationsScreen from "@/screens/RecommendationsScreen";
 import ProfileStackNavigator from "@/navigation/ProfileStackNavigator";
-import ActionScreen from "@/screens/ActionScreen";
 import { useTheme } from "@/hooks/useTheme";
-import { Gradients, Shadows, BorderRadius } from "@/constants/theme";
+import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 export type MainTabParamList = {
-  HomeTab: undefined;
   ExploreTab: undefined;
-  ActionTab: undefined;
+  RouteTab: undefined;
+  ChatTab: undefined;
+  RecommendationsTab: undefined;
   ProfileTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-function CustomTabBarButton({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
-  const scale = useSharedValue(1);
-  const rotation = useSharedValue(0);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { rotate: `${rotation.value}deg` }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.9);
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1);
-    rotation.value = withSpring(rotation.value + 90);
-  };
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress?.();
-  };
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={styles.fabWrapper}
-    >
-      <Animated.View style={[styles.fabContainer, Shadows.fab, animatedStyle]}>
-        <LinearGradient
-          colors={Gradients.purplePink}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.fab}
-        >
-          <Feather name="plus" size={28} color="#FFFFFF" />
-        </LinearGradient>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
 export default function MainTabNavigator() {
   const { theme, isDark } = useTheme();
+  const screenOptions = useScreenOptions();
 
   return (
     <Tab.Navigator
-      initialRouteName="HomeTab"
+      initialRouteName="ExploreTab"
       screenOptions={{
         tabBarActiveTintColor: theme.tabIconSelected,
         tabBarInactiveTintColor: theme.tabIconDefault,
@@ -98,27 +51,17 @@ export default function MainTabNavigator() {
               style={StyleSheet.absoluteFill}
             />
           ) : null,
-        headerShown: false,
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: "500",
         },
       }}
     >
       <Tab.Screen
-        name="HomeTab"
+        name="ExploreTab"
         component={HomeStackNavigator}
         options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="home" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="ExploreTab"
-        component={ExploreStackNavigator}
-        options={{
+          ...screenOptions,
           title: "Explore",
           tabBarIcon: ({ color, size }) => (
             <Feather name="compass" size={size} color={color} />
@@ -126,18 +69,46 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="ActionTab"
-        component={ActionScreen}
+        name="RouteTab"
+        component={RouteScreen}
         options={{
-          title: "",
-          tabBarIcon: () => null,
-          tabBarButton: (props) => <CustomTabBarButton {...props} />,
+          ...screenOptions,
+          headerTitle: "Route Planner",
+          title: "Route",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="map-pin" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ChatTab"
+        component={ChatScreen}
+        options={{
+          ...screenOptions,
+          headerTitle: "UnfoldBot",
+          title: "Chat",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="message-circle" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="RecommendationsTab"
+        component={RecommendationsScreen}
+        options={{
+          ...screenOptions,
+          headerTitle: "For You",
+          title: "Picks",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="heart" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="ProfileTab"
         component={ProfileStackNavigator}
         options={{
+          ...screenOptions,
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size} color={color} />
@@ -147,21 +118,3 @@ export default function MainTabNavigator() {
     </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  fabWrapper: {
-    top: -20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fabContainer: {
-    borderRadius: BorderRadius.full,
-  },
-  fab: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-});

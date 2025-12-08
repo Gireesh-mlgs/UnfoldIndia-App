@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Image, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -7,18 +7,21 @@ import Animated, {
   withTiming,
   withDelay,
   Easing,
-  runOnJS,
 } from "react-native-reanimated";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
-import { Gradients } from "@/constants/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Gradients, Colors } from "@/constants/theme";
 import { ThemedText } from "@/components/ThemedText";
 
 const { width } = Dimensions.get("window");
+const ONBOARDING_KEY = "@unfold_india_onboarding_complete";
 
 export default function SplashScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [isReady, setIsReady] = useState(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
   
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.8);
@@ -26,18 +29,40 @@ export default function SplashScreen() {
   const textTranslateY = useSharedValue(20);
 
   useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const value = await AsyncStorage.getItem(ONBOARDING_KEY);
+        setHasCompletedOnboarding(value === "true");
+      } catch (error) {
+        setHasCompletedOnboarding(false);
+      }
+      setIsReady(true);
+    };
+
+    checkOnboarding();
+  }, []);
+
+  useEffect(() => {
     logoOpacity.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.ease) });
     logoScale.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.5)) });
     
     textOpacity.value = withDelay(400, withTiming(1, { duration: 600 }));
     textTranslateY.value = withDelay(400, withTiming(0, { duration: 600, easing: Easing.out(Easing.ease) }));
+  }, []);
+
+  useEffect(() => {
+    if (!isReady || hasCompletedOnboarding === null) return;
 
     const timer = setTimeout(() => {
-      navigation.replace("Main");
+      if (hasCompletedOnboarding) {
+        navigation.replace("Main");
+      } else {
+        navigation.replace("Onboarding");
+      }
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [isReady, hasCompletedOnboarding]);
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
@@ -51,7 +76,7 @@ export default function SplashScreen() {
 
   return (
     <LinearGradient
-      colors={Gradients.purpleBlue}
+      colors={Gradients.navyIndigo}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}
@@ -70,7 +95,7 @@ export default function SplashScreen() {
           lightColor="#FFFFFF"
           darkColor="#FFFFFF"
         >
-          Glassify
+          Unfold India
         </ThemedText>
         <ThemedText
           type="small"
@@ -78,7 +103,7 @@ export default function SplashScreen() {
           lightColor="rgba(255,255,255,0.8)"
           darkColor="rgba(255,255,255,0.8)"
         >
-          Premium Experience
+          Discover India's hidden gems
         </ThemedText>
       </Animated.View>
     </LinearGradient>
@@ -96,7 +121,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 30,
     overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     justifyContent: "center",
     alignItems: "center",
   },
